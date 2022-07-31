@@ -36,13 +36,11 @@ class SecondFragment : Fragment() {
 
     inner class CaptureCallback : CameraCaptureSession.CaptureCallback() {
         override fun onCaptureCompleted(session: CameraCaptureSession, request: CaptureRequest, result: TotalCaptureResult) {
-            Toast.makeText(context, "capture completed.", Toast.LENGTH_SHORT).show()
         }
     }
 
     inner class StateCallback : CameraCaptureSession.StateCallback() {
         override fun onConfigured(session: CameraCaptureSession) {
-            Toast.makeText(context, "onConfigured.", Toast.LENGTH_SHORT).show()
             val captureRequestBuilder = cameraDevice!!.createCaptureRequest(TEMPLATE_PREVIEW)
             captureRequestBuilder.addTarget(binding.surfaceView.holder.surface)
             session.setRepeatingRequest(captureRequestBuilder.build(), captureCallback, null)
@@ -90,10 +88,6 @@ class SecondFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        binding.buttonSecond.setOnClickListener {
-            findNavController().navigate(R.id.action_SecondFragment_to_FirstFragment)
-        }
         openCamera()
     }
 
@@ -108,7 +102,7 @@ class SecondFragment : Fragment() {
         cameraDevice?.close()
         if (ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
             val camId = arguments?.getString("camId")
-            cameraManager!!.openCamera(camId!!, cameraStateCallback, null)
+            cameraManager.openCamera(camId!!, cameraStateCallback, null)
         } else {
             Toast.makeText(context, "Failed to open camera: Missing permission.",
                 Toast.LENGTH_SHORT
