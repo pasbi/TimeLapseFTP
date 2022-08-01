@@ -1,10 +1,7 @@
 package de.pakab.timelapseftp
 
 import android.annotation.SuppressLint
-import android.os.Build
-import android.os.Bundle
-import android.os.Handler
-import android.os.HandlerThread
+import android.os.*
 import android.util.Log
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
@@ -26,7 +23,9 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
+import java.io.IOException
 import java.nio.ByteBuffer
+import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import kotlin.IllegalStateException
@@ -36,6 +35,7 @@ import kotlin.IllegalStateException
  */
 class FirstFragment : Fragment() {
 
+    private var stopped = true
     private val TAG = "FirstFragment"
     private var _binding: FragmentFirstBinding? = null
 
@@ -54,6 +54,8 @@ class FirstFragment : Fragment() {
     private var cameraProvider: ProcessCameraProvider? = null
     private var preview: Preview? = null
     private lateinit var cameraExecutor: ExecutorService
+    private var lastCapture: Instant? = null
+    private val captureDelayMs = 1000L * 30L
 
     @RequiresApi(Build.VERSION_CODES.O)
     private fun upload(byteArray: ByteArray) {
@@ -84,6 +86,8 @@ class FirstFragment : Fragment() {
                     Log.w(TAG, "FTP Connection closed: ${e.message}")
                 } catch (e: SocketException) {
                     Log.w(TAG, "Socket Exception: ${e.message}")
+                } catch (e: IOException) {
+                    Log.w(TAG, "IO Exception: ${e.message}")
                 }
             } else {
                 Log.w(TAG, "Failed to connect to ftp server: ${ftpClient.reply}")
@@ -109,6 +113,9 @@ class FirstFragment : Fragment() {
         val data = ByteArray(remaining())
         get(data)   // Copy the buffer into a byte array
         return data // Return the byte array
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         cameraExecutor = Executors.newSingleThreadExecutor()
@@ -116,27 +123,71 @@ class FirstFragment : Fragment() {
             setUpCamera()
         }
         binding.buttonCapture.setOnClickListener {
-            imageCapture?.let { imageCapture ->
-                imageCapture.takePicture(cameraExecutor, object : OnImageCapturedCallback() {
-                    @SuppressLint("UnsafeOptInUsageError")
-                    @RequiresApi(Build.VERSION_CODES.O)
-                    override fun onCaptureSuccess(image: ImageProxy) {
-                        val planes = image.planes
-                        if (planes.size != 1) {
-                            Log.e(TAG, "Expected one plane but got ${planes.size}")
-                            return
-                        }
-                        Log.i(TAG,"Captured image ${image.width}x${image.height}")
-                        upload(planes[0].buffer.toByteArray().clone())
-                        image.close()
-                    }
-
-                    override fun onError(exception: ImageCaptureException) {
-                        Log.e(TAG, "Photo capture failed: ${exception.message}", exception)
-                    }
-                })
-            }
+            capture()
         }
+        binding.buttonStart.setOnClickListener {
+            start()
+        }
+        binding.buttonStop.setOnClickListener {
+            stop()
+        }
+    }
+
+    private fun capture() {
+        imageCapture?.let { imageCapture ->
+            imageCapture.takePicture(cameraExecutor, object : OnImageCapturedCallback() {
+                @RequiresApi(Build.VERSION_CODES.O)
+                override fun onCaptureSuccess(image: ImageProxy) {
+                    val planes = image.planes
+                    if (planes.size != 1) {
+                        Log.e(TAG, "Expected one plane but got ${planes.size}")
+                        return
+                    }
+                    Log.i(TAG,"Captured image ${image.width}x${image.height}")
+                    upload(planes[0].buffer.toByteArray().clone())
+                    image.close()
+                }
+
+                override fun onError(exception: ImageCaptureException) {
+                    Log.e(TAG, "Photo capture failed: ${exception.message}", exception)
+                }
+            })
+        }
+    }
+
+    private fun start() {
+        stopped = false
+        val captureHandler = Handler(Looper.getMainLooper())
+        captureHandler.post(object : Runnable {
+            @RequiresApi(Build.VERSION_CODES.O)
+            override fun run() {
+                if (!stopped) {
+                    lastCapture = Instant.now()
+                    capture()
+                    updateLabel()
+                    captureHandler.postDelayed(this, captureDelayMs)
+                }
+            }
+        })
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun stop() {
+        stopped = true
+        updateLabel()
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun updateLabel() {
+        val dtf = DateTimeFormatter.ofPattern("HH:mm:ss").withZone(ZoneOffset.UTC);
+        val lastCapture = lastCapture ?: throw java.lang.IllegalStateException()
+        val lastCaptureS = dtf.format(lastCapture)
+        val nextCaptureS = if (stopped) {
+            "never"
+        } else {
+            dtf.format(lastCapture.plusMillis(captureDelayMs))
+        }
+        binding.textView.text = "Last Capture: ${lastCaptureS}\nNext Capture: $nextCaptureS"
     }
 
     private fun setUpCamera() {
