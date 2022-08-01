@@ -26,10 +26,16 @@
             android:layout_height="62dp" />
 
         <Button
-            android:id="@+id/button"
+            android:id="@+id/buttonLive"
             android:layout_width="match_parent"
-            android:layout_height="197dp"
-            android:text="Show" />
+            android:layout_height="wrap_content"
+            android:text="Live" />
+
+        <Button
+            android:id="@+id/buttonCapture"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Capture" />
 
     </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

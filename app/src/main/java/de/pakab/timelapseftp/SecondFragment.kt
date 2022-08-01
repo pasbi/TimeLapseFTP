@@ -54,6 +54,7 @@ class SecondFragment : Fragment() {
 
     private val captureCallback = CaptureCallback()
     private val stateCallback = StateCallback()
+    private var cameraStateCallback = CameraStateCallback()
 
     inner class CameraStateCallback : CameraDevice.StateCallback() {
         @RequiresApi(Build.VERSION_CODES.P)
@@ -73,8 +74,6 @@ class SecondFragment : Fragment() {
             Toast.makeText(context, "On Error: $error", Toast.LENGTH_SHORT).show()
         }
     }
-
-    private var cameraStateCallback = CameraStateCallback()
 
     override fun onCreateView(
             inflater: LayoutInflater, container: ViewGroup?,
