@@ -1,6 +1,5 @@
 package de.pakab.timelapseftp
 
-import android.annotation.SuppressLint
 import android.os.*
 import android.util.Log
 import androidx.fragment.app.Fragment
@@ -11,24 +10,22 @@ import android.view.ViewGroup
 import de.pakab.timelapseftp.databinding.FragmentFirstBinding
 import android.widget.Toast
 import android.widget.Toast.LENGTH_SHORT
-import androidx.annotation.RequiresApi
 import androidx.camera.core.*
 import androidx.camera.core.ImageCapture.OnImageCapturedCallback
 import org.apache.commons.net.ftp.FTPClient
 import org.apache.commons.net.ftp.FTPConnectionClosedException
 import java.io.ByteArrayInputStream
 import java.net.SocketException
-import java.time.Instant
-import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import java.io.IOException
 import java.nio.ByteBuffer
+import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import kotlin.IllegalStateException
+import  java.util.Date
 
 /**
  * A simple [Fragment] subclass as the default destination in the navigation.
@@ -54,18 +51,14 @@ class FirstFragment : Fragment() {
     private var cameraProvider: ProcessCameraProvider? = null
     private var preview: Preview? = null
     private lateinit var cameraExecutor: ExecutorService
-    private var lastCapture: Instant? = null
-    private val captureDelayMs = 1000L * 30L
+    private var lastCapture: Date? = null
+    private val captureDelayS = 60L * 60L * 2L  // every 2h
 
-    @RequiresApi(Build.VERSION_CODES.O)
     private fun upload(byteArray: ByteArray) {
         if (!networkThread.isAlive) {
             networkThread.start()
         }
-        val filename = DateTimeFormatter
-            .ofPattern("yyyy-MM-dd_HH-mm-ss-SSSSSS")
-            .withZone(ZoneOffset.UTC)
-            .format(Instant.now()) + ".jpg"
+        val filename = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss-SSSSSS").format(Date()) + ".jpg"
         Handler(networkThread.looper).post {
             if (!ftpClient.isAvailable) {
                 Log.i(TAG, "FTPClient is not available. Attempt to connect ...")
@@ -115,7 +108,6 @@ class FirstFragment : Fragment() {
         return data // Return the byte array
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         cameraExecutor = Executors.newSingleThreadExecutor()
@@ -136,7 +128,6 @@ class FirstFragment : Fragment() {
     private fun capture() {
         imageCapture?.let { imageCapture ->
             imageCapture.takePicture(cameraExecutor, object : OnImageCapturedCallback() {
-                @RequiresApi(Build.VERSION_CODES.O)
                 override fun onCaptureSuccess(image: ImageProxy) {
                     val planes = image.planes
                     if (planes.size != 1) {
@@ -159,33 +150,33 @@ class FirstFragment : Fragment() {
         stopped = false
         val captureHandler = Handler(Looper.getMainLooper())
         captureHandler.post(object : Runnable {
-            @RequiresApi(Build.VERSION_CODES.O)
             override fun run() {
                 if (!stopped) {
-                    lastCapture = Instant.now()
+                    lastCapture = Date()
                     capture()
                     updateLabel()
-                    captureHandler.postDelayed(this, captureDelayMs)
+                    captureHandler.postDelayed(this, captureDelayS * 1000L)
                 }
             }
         })
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
     private fun stop() {
         stopped = true
         updateLabel()
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
     private fun updateLabel() {
-        val dtf = DateTimeFormatter.ofPattern("HH:mm:ss").withZone(ZoneOffset.UTC);
+        val dtf = SimpleDateFormat("HH:mm:ss")
         val lastCapture = lastCapture ?: throw java.lang.IllegalStateException()
         val lastCaptureS = dtf.format(lastCapture)
         val nextCaptureS = if (stopped) {
             "never"
         } else {
-            dtf.format(lastCapture.plusMillis(captureDelayMs))
+            var calendar = Calendar.getInstance()
+            calendar.time = lastCapture
+            calendar.add(Calendar.SECOND, captureDelayS.toInt())
+            dtf.format(calendar.time)
         }
         binding.textView.text = "Last Capture: ${lastCaptureS}\nNext Capture: $nextCaptureS"
     }
