@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.graphics.ImageFormat.JPEG
 import android.hardware.camera2.*
 import android.hardware.camera2.CameraCharacteristics.*
+import android.hardware.camera2.CaptureRequest.*
 import android.hardware.camera2.params.OutputConfiguration
 import android.hardware.camera2.params.SessionConfiguration
 import android.media.*
@@ -31,6 +32,7 @@ import androidx.navigation.fragment.findNavController
 import org.apache.commons.net.ftp.FTPClient
 import org.apache.commons.net.ftp.FTPConnectionClosedException
 import java.io.ByteArrayInputStream
+import java.net.SocketException
 import java.time.Instant
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
@@ -85,7 +87,9 @@ class FirstFragment
                         Log.e(TAG, "Failed to upload image '$filename'")
                     }
                 } catch (e: FTPConnectionClosedException) {
-                    Log.w(TAG, "FTP Connection closed.")
+                    Log.w(TAG, "FTP Connection closed: ${e.message}")
+                } catch (e: SocketException) {
+                    Log.w(TAG, "Socket Exception: ${e.message}")
                 }
             } else {
                 Log.w(TAG, "Failed to connect to ftp server: ${ftpClient.reply}")
@@ -116,7 +120,7 @@ class FirstFragment
                 val buffer = image.planes[0].buffer
                 var byteArray = ByteArray(buffer.capacity())
                 buffer.get(byteArray)
-                upload(byteArray)
+                upload(byteArray.clone())
             }
             image.close()
         }
@@ -184,9 +188,9 @@ class FirstFragment
         return cameraManager.cameraIdList.map {
             val camcar = cameraManager.getCameraCharacteristics(it)
             val face = when(camcar.get(LENS_FACING) as Int) {
-                LENS_FACING_FRONT -> "Front"
-                LENS_FACING_BACK -> "Back"
-                LENS_FACING_EXTERNAL -> "External"
+                CameraCharacteristics.LENS_FACING_FRONT -> "Front"
+                CameraCharacteristics.LENS_FACING_BACK -> "Back"
+                CameraCharacteristics.LENS_FACING_EXTERNAL -> "External"
                 else -> "Unknown"
             }
             val focalLengths = camcar.get(LENS_INFO_AVAILABLE_FOCAL_LENGTHS) as FloatArray
@@ -212,6 +216,9 @@ class FirstFragment
         binding.buttonCapture.setOnClickListener {
             val captureRequestBuilder = cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
             captureRequestBuilder.addTarget(imageReader!!.surface)
+            captureRequestBuilder.set(CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_START)
+            captureRequestBuilder.set(CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_ON)
+            captureRequestBuilder.set(CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO)
             if (cameraCaptureSession == null) {
                 Toast.makeText(context, "Missing camera capture session.", LENGTH_SHORT).show()
             } else {
