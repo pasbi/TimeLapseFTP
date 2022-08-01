@@ -1,8 +1,6 @@
 package de.pakab.timelapseftp
 
-import android.content.Context.CAMERA_SERVICE
-import android.hardware.camera2.*
-import android.hardware.camera2.CameraCharacteristics.*
+import android.annotation.SuppressLint
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -28,9 +26,10 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
-import java.lang.IllegalStateException
+import java.nio.ByteBuffer
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import kotlin.IllegalStateException
 
 /**
  * A simple [Fragment] subclass as the default destination in the navigation.
@@ -70,6 +69,7 @@ class FirstFragment : Fragment() {
                 Log.i(TAG, "FTPClient is not available. Attempt to connect ...")
                 ftpClient.connect(serverAddress)
                 ftpClient.login(userName, password)
+                ftpClient.setFileType(FTPClient.BINARY_FILE_TYPE)
             }
             if (ftpClient.isAvailable) {
                 try {
@@ -104,6 +104,11 @@ class FirstFragment : Fragment() {
         return binding.root
     }
 
+    private fun ByteBuffer.toByteArray(): ByteArray {
+        rewind()    // Rewind the buffer to zero
+        val data = ByteArray(remaining())
+        get(data)   // Copy the buffer into a byte array
+        return data // Return the byte array
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         cameraExecutor = Executors.newSingleThreadExecutor()
@@ -113,6 +118,7 @@ class FirstFragment : Fragment() {
         binding.buttonCapture.setOnClickListener {
             imageCapture?.let { imageCapture ->
                 imageCapture.takePicture(cameraExecutor, object : OnImageCapturedCallback() {
+                    @SuppressLint("UnsafeOptInUsageError")
                     @RequiresApi(Build.VERSION_CODES.O)
                     override fun onCaptureSuccess(image: ImageProxy) {
                         val planes = image.planes
@@ -120,10 +126,9 @@ class FirstFragment : Fragment() {
                             Log.e(TAG, "Expected one plane but got ${planes.size}")
                             return
                         }
-                        val buffer = planes[0].buffer
-                        val byteArray = ByteArray(buffer.capacity())
-                        buffer.get(byteArray)
-                        upload(byteArray.clone())
+                        Log.i(TAG,"Captured image ${image.width}x${image.height}")
+                        upload(planes[0].buffer.toByteArray().clone())
+                        image.close()
                     }
 
                     override fun onError(exception: ImageCaptureException) {

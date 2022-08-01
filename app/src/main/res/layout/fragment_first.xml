@@ -14,23 +14,6 @@
         app:layout_constraintTop_toTopOf="parent"
         tools:layout_editor_absoluteX="1dp">
 
-        <TextView
-            android:id="@+id/textView"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Select Camera:" />
-
-        <Spinner
-            android:id="@+id/spinner"
-            android:layout_width="match_parent"
-            android:layout_height="62dp" />
-
-        <Button
-            android:id="@+id/buttonLive"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Live" />
-
         <Button
             android:id="@+id/buttonCapture"
             android:layout_width="match_parent"
