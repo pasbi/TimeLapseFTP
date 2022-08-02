@@ -44,7 +44,7 @@ class FirstFragment : Fragment() {
     private val userName = ""
     private val password = ""
     private val networkThread = HandlerThread("NetworkThread")
-    private val ftpClient = FTPClient()
+    private var ftpClient = FTPClient()
 
     private var imageCapture: ImageCapture? = null
     private var camera: Camera? = null
@@ -76,24 +76,34 @@ class FirstFragment : Fragment() {
         Log.e(TAG, text)
     }
 
-    private fun upload(byteArray: ByteArray) {
+    private fun connect(): Boolean {
+        logi("FTPClient is not available. Attempt to connect ...")
+        ftpClient.connect(serverAddress)
+        ftpClient.login(userName, password)
+        ftpClient.setFileType(FTPClient.BINARY_FILE_TYPE)
+        return if (ftpClient.isAvailable) {
+            logi("Connection successful.")
+            true
+        } else {
+            logw("Connection failed. Reply: ${ftpClient.reply}, Status: ${ftpClient.status}")
+            false
+        }
+    }
+
+    private fun upload(byteArray: ByteArray, attempt: Int = 0) {
         if (!networkThread.isAlive) {
             networkThread.start()
         }
+        val maxAttempts = 5
+        if (attempt > maxAttempts) {
+            logi("Max number of attempts reached. Don't repeat upload.")
+            return;
+        } else if (attempt > 0) {
+            logi("Upload (retry #$attempt/$maxAttempts)")
+        }
         val filename = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss-SSSSSS").format(Date()) + ".jpg"
         Handler(networkThread.looper).post {
-            if (!ftpClient.isAvailable) {
-                logi("FTPClient is not available. Attempt to connect ...")
-                ftpClient.connect(serverAddress)
-                ftpClient.login(userName, password)
-                ftpClient.setFileType(FTPClient.BINARY_FILE_TYPE)
-                if (ftpClient.isAvailable) {
-                    logi("Connection successful.")
-                } else {
-                    logw("Connection failed. Reply: ${ftpClient.reply}, Status: ${ftpClient.status}")
-                }
-            }
-            if (ftpClient.isAvailable) {
+            if (ftpClient.isAvailable || connect()) {
                 try {
                     val inputStream = ByteArrayInputStream(byteArray)
                     logi("uploading $filename ...")
@@ -104,10 +114,16 @@ class FirstFragment : Fragment() {
                     }
                 } catch (e: FTPConnectionClosedException) {
                     loge("FTP Connection closed: ${e.message}")
+                    ftpClient = FTPClient()
+                    upload(byteArray, attempt + 1)
                 } catch (e: SocketException) {
                     loge("Socket Exception: ${e.message}")
+                    ftpClient = FTPClient()
+                    upload(byteArray, attempt + 1)
                 } catch (e: IOException) {
                     loge("IO Exception: ${e.message}")
+                    ftpClient = FTPClient()
+                    upload(byteArray, attempt + 1)
                 }
             } else {
                 loge("Failed to connect to ftp server. Reply: ${ftpClient.reply}, Status: ${ftpClient.status}")
