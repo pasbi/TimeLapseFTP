@@ -53,6 +53,28 @@ class FirstFragment : Fragment() {
     private lateinit var cameraExecutor: ExecutorService
     private var lastCapture: Date? = null
     private val captureDelayS = 60L * 60L * 2L  // every 2h
+    private var log = ""
+
+    private fun logTextView(code: String, text: String) {
+        log = "$code: $text\n$log"
+        Handler(requireContext().mainLooper).post {
+            binding.textView3.text = log
+        }
+    }
+
+    private fun logi(text: String) {
+        logTextView("I", text)
+        Log.i(TAG, text)
+    }
+
+    private fun logw(text: String) {
+        logTextView("W", text)
+        Log.w(TAG, text)
+    }
+    private fun loge(text: String) {
+        logTextView("E", text)
+        Log.e(TAG, text)
+    }
 
     private fun upload(byteArray: ByteArray) {
         if (!networkThread.isAlive) {
@@ -61,29 +83,34 @@ class FirstFragment : Fragment() {
         val filename = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss-SSSSSS").format(Date()) + ".jpg"
         Handler(networkThread.looper).post {
             if (!ftpClient.isAvailable) {
-                Log.i(TAG, "FTPClient is not available. Attempt to connect ...")
+                logi("FTPClient is not available. Attempt to connect ...")
                 ftpClient.connect(serverAddress)
                 ftpClient.login(userName, password)
                 ftpClient.setFileType(FTPClient.BINARY_FILE_TYPE)
+                if (ftpClient.isAvailable) {
+                    logi("Connection successful.")
+                } else {
+                    logw("Connection failed. Reply: ${ftpClient.reply}, Status: ${ftpClient.status}")
+                }
             }
             if (ftpClient.isAvailable) {
                 try {
                     val inputStream = ByteArrayInputStream(byteArray)
-                    Log.i(TAG, "uploading $filename ...")
+                    logi("uploading $filename ...")
                     if (ftpClient.appendFile(filename, inputStream)) {
-                        Log.i(TAG, "Successfully uploaded image '$filename'")
+                        logi("Successfully uploaded image '$filename'")
                     } else {
-                        Log.e(TAG, "Failed to upload image '$filename'")
+                        loge("Failed to upload image '$filename'")
                     }
                 } catch (e: FTPConnectionClosedException) {
-                    Log.w(TAG, "FTP Connection closed: ${e.message}")
+                    loge("FTP Connection closed: ${e.message}")
                 } catch (e: SocketException) {
-                    Log.w(TAG, "Socket Exception: ${e.message}")
+                    loge("Socket Exception: ${e.message}")
                 } catch (e: IOException) {
-                    Log.w(TAG, "IO Exception: ${e.message}")
+                    loge("IO Exception: ${e.message}")
                 }
             } else {
-                Log.w(TAG, "Failed to connect to ftp server: ${ftpClient.reply}")
+                loge("Failed to connect to ftp server. Reply: ${ftpClient.reply}, Status: ${ftpClient.status}")
                 Toast.makeText(
                     context,
                     "Failed to connect to ftp server: ${ftpClient.reply}",
@@ -131,16 +158,16 @@ class FirstFragment : Fragment() {
                 override fun onCaptureSuccess(image: ImageProxy) {
                     val planes = image.planes
                     if (planes.size != 1) {
-                        Log.e(TAG, "Expected one plane but got ${planes.size}")
+                        loge("Expected one plane but got ${planes.size}")
                         return
                     }
-                    Log.i(TAG,"Captured image ${image.width}x${image.height}")
+                    logi("Captured image ${image.width}x${image.height}")
                     upload(planes[0].buffer.toByteArray().clone())
                     image.close()
                 }
 
                 override fun onError(exception: ImageCaptureException) {
-                    Log.e(TAG, "Photo capture failed: ${exception.message}", exception)
+                    loge("Photo capture failed: ${exception.message}")
                 }
             })
         }
@@ -210,7 +237,7 @@ class FirstFragment : Fragment() {
             preview?.setSurfaceProvider(binding.viewFinder.surfaceProvider)
             observerCameraState(camera?.cameraInfo!!)
         } catch (exc: Exception){
-            Log.e(TAG,"Use case binding failed", exc)
+            loge("Use case binding failed")
         }
     }
 
