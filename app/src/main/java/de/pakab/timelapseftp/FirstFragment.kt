@@ -1,5 +1,6 @@
 package de.pakab.timelapseftp
 
+import android.content.Context.BATTERY_SERVICE
 import android.os.*
 import android.util.Log
 import androidx.fragment.app.Fragment
@@ -90,7 +91,12 @@ class FirstFragment : Fragment() {
         }
     }
 
-    private fun upload(byteArray: ByteArray, attempt: Int = 0) {
+    private fun decorateLog() {
+        val bm = requireContext().getSystemService(BATTERY_SERVICE) as BatteryManager
+        val batLevel = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
+        logi("Battery: $batLevel%")
+    }
+
     private fun upload(byteArray: ByteArray) {
         if (!networkThread.isAlive) {
             networkThread.start()
@@ -101,8 +107,15 @@ class FirstFragment : Fragment() {
                 try {
                     val inputStream = ByteArrayInputStream(byteArray)
                     logi("uploading $filename ...")
-                    if (ftpClient.appendFile(filename, inputStream)) {
+                    if (ftpClient.storeFile(filename, inputStream)) {
                         logi("Successfully uploaded image '$filename'")
+                    } else {
+                        loge("Failed to upload image '$filename'")
+                    }
+
+                    decorateLog()
+                    if (ftpClient.storeFile("log.txt", log.byteInputStream(Charsets.UTF_8))) {
+                        logi("Successfully uploaded log.")
                     } else {
                         loge("Failed to upload image '$filename'")
                     }
