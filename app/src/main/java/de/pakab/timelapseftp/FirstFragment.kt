@@ -91,19 +91,13 @@ class FirstFragment : Fragment() {
     }
 
     private fun upload(byteArray: ByteArray, attempt: Int = 0) {
+    private fun upload(byteArray: ByteArray) {
         if (!networkThread.isAlive) {
             networkThread.start()
         }
-        val maxAttempts = 5
-        if (attempt > maxAttempts) {
-            logi("Max number of attempts reached. Don't repeat upload.")
-            return;
-        } else if (attempt > 0) {
-            logi("Upload (retry #$attempt/$maxAttempts)")
-        }
         val filename = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss-SSSSSS").format(Date()) + ".jpg"
         Handler(networkThread.looper).post {
-            if (ftpClient.isAvailable || connect()) {
+            if (connect()) {
                 try {
                     val inputStream = ByteArrayInputStream(byteArray)
                     logi("uploading $filename ...")
@@ -114,16 +108,10 @@ class FirstFragment : Fragment() {
                     }
                 } catch (e: FTPConnectionClosedException) {
                     loge("FTP Connection closed: ${e.message}")
-                    ftpClient = FTPClient()
-                    upload(byteArray, attempt + 1)
                 } catch (e: SocketException) {
                     loge("Socket Exception: ${e.message}")
-                    ftpClient = FTPClient()
-                    upload(byteArray, attempt + 1)
                 } catch (e: IOException) {
                     loge("IO Exception: ${e.message}")
-                    ftpClient = FTPClient()
-                    upload(byteArray, attempt + 1)
                 }
             } else {
                 loge("Failed to connect to ftp server. Reply: ${ftpClient.reply}, Status: ${ftpClient.status}")
@@ -133,6 +121,8 @@ class FirstFragment : Fragment() {
                     LENGTH_SHORT
                 ).show()
             }
+            ftpClient.logout()
+            ftpClient.disconnect()
         }
     }
 
