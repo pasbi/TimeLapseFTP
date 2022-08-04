@@ -36,6 +36,7 @@ class FirstFragment : Fragment() {
     private var stopped = true
     private val TAG = "FirstFragment"
     private var _binding: FragmentFirstBinding? = null
+    private val captureHandler = Handler(Looper.getMainLooper())
 
     // This property is only valid between onCreateView and
     // onDestroyView.
@@ -194,7 +195,6 @@ class FirstFragment : Fragment() {
 
     private fun start() {
         stopped = false
-        val captureHandler = Handler(Looper.getMainLooper())
         captureHandler.post(object : Runnable {
             override fun run() {
                 if (!stopped) {
@@ -209,6 +209,7 @@ class FirstFragment : Fragment() {
 
     private fun stop() {
         stopped = true
+        captureHandler.removeCallbacksAndMessages(null)
         updateLabel()
     }
 
