@@ -57,11 +57,6 @@
 
         </LinearLayout>
 
-        <androidx.camera.view.PreviewView
-            android:id="@+id/view_finder"
-            android:layout_width="match_parent"
-            android:layout_height="300dp"
-            android:layout_weight="1" />
         <TextView
             android:id="@+id/textView3"
             android:scrollbars = "vertical"

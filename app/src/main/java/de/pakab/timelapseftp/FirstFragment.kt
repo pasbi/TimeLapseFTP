@@ -51,7 +51,6 @@ class FirstFragment : Fragment() {
     private var imageCapture: ImageCapture? = null
     private var camera: Camera? = null
     private var cameraProvider: ProcessCameraProvider? = null
-    private var preview: Preview? = null
     private lateinit var cameraExecutor: ExecutorService
     private var lastCapture: Date? = null
     private val captureDelayS = 60L * 60L * 2L  // every 2h
@@ -239,10 +238,6 @@ class FirstFragment : Fragment() {
     private fun bindCameraUseCases() {
         val cameraProvider = cameraProvider ?: throw IllegalStateException("Camera initialization failed.")
         val cameraSelector = CameraSelector.Builder().requireLensFacing(CameraSelector.LENS_FACING_BACK).build()
-        preview = Preview.Builder()
-            .setTargetAspectRatio(AspectRatio.RATIO_4_3)
-            .setTargetRotation(ROTATION_0)
-            .build()
 
         imageCapture = ImageCapture.Builder()
             .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
@@ -253,8 +248,7 @@ class FirstFragment : Fragment() {
         cameraProvider.unbindAll()
 
         try {
-            camera = cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageCapture)
-            preview?.setSurfaceProvider(binding.viewFinder.surfaceProvider)
+            camera = cameraProvider.bindToLifecycle(this, cameraSelector, imageCapture)
             observerCameraState(camera?.cameraInfo!!)
         } catch (exc: Exception){
             loge("Use case binding failed")
