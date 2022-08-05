@@ -58,11 +58,11 @@
         </LinearLayout>
 
         <TextView
-            android:id="@+id/textView3"
-            android:scrollbars = "vertical"
+            android:id="@+id/tvLog"
             android:layout_width="match_parent"
             android:layout_height="300dp"
-            android:text="TextView" />
+            android:scrollbars="vertical"
+            android:text="LOG" />
     </LinearLayout>
 
 
