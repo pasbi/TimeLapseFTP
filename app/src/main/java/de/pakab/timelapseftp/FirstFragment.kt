@@ -1,16 +1,19 @@
 package de.pakab.timelapseftp
 
 import android.os.*
-import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import de.pakab.timelapseftp.databinding.FragmentFirstBinding
 import android.widget.Toast
 import androidx.camera.core.*
+import androidx.fragment.app.Fragment
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
+import de.pakab.timelapseftp.databinding.FragmentFirstBinding
 import java.text.SimpleDateFormat
 import java.util.*
-import  java.util.Date
+import java.util.concurrent.TimeUnit
 
 /**
  * A simple [Fragment] subclass as the default destination in the navigation.
@@ -97,16 +100,8 @@ class FirstFragment : Fragment() {
     private fun start() {
         stop()
         stopped = false
-        captureHandler.post(object : Runnable {
-            override fun run() {
-                if (!stopped) {
-                    lastCapture = Date()
-                    ftpCamera!!.capture()
-                    updateLabel()
-                    captureHandler.postDelayed(this, captureDelayS * 1000L)
-                }
-            }
-        })
+        val pwr = PeriodicWorkRequestBuilder<CaptureWorker>(captureDelayS, TimeUnit.SECONDS).build()
+        WorkManager.getInstance(requireContext()).enqueueUniquePeriodicWork("capture", ExistingPeriodicWorkPolicy.REPLACE, pwr);
     }
 
     private fun stop() {
