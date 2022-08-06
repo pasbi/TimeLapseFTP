@@ -1,12 +1,15 @@
 package de.pakab.timelapseftp
 
+import android.content.Intent
 import android.os.*
+import android.util.Log
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import de.pakab.timelapseftp.databinding.FragmentFirstBinding
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.camera.core.*
 import java.text.SimpleDateFormat
 import java.util.*
@@ -17,6 +20,8 @@ import  java.util.Date
  */
 class FirstFragment : Fragment() {
 
+    private var captureIntent: Intent? = null
+    private val TAG = "FirstFragment"
     private var stopped = true
     private var _binding: FragmentFirstBinding? = null
     private val captureHandler = Handler(Looper.getMainLooper())
@@ -37,6 +42,7 @@ class FirstFragment : Fragment() {
     }
 
 
+    @RequiresApi(Build.VERSION_CODES.P)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -94,24 +100,19 @@ class FirstFragment : Fragment() {
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.P)
     private fun start() {
-        stop()
-        stopped = false
-        captureHandler.post(object : Runnable {
-            override fun run() {
-                if (!stopped) {
-                    lastCapture = Date()
-                    ftpCamera!!.capture()
-                    updateLabel()
-                    captureHandler.postDelayed(this, captureDelayS * 1000L)
-                }
-            }
-        })
+        val context = requireContext()
+        if (captureIntent != null) {
+            stop()
+        }
+        captureIntent = Intent(context, CaptureService::class.java)
+        context.startForegroundService(captureIntent)
     }
 
     private fun stop() {
         stopped = true
-        captureHandler.removeCallbacksAndMessages(null)
+        requireContext().stopService(captureIntent)
         updateLabel()
     }
 

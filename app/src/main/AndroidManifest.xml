@@ -5,6 +5,7 @@
 
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -15,6 +16,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.TimeLapseFTP"
         tools:targetApi="31">
+        <service android:enabled="true" android:name="de.pakab.timelapseftp.CaptureService"/>
         <activity
             android:name=".MainActivity"
             android:exported="true"

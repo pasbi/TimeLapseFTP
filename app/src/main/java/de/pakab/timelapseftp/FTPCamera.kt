@@ -1,15 +1,19 @@
 package de.pakab.timelapseftp
 
 import android.content.Context
+import android.os.Build
 import android.util.Log
 import android.view.Surface.ROTATION_0
+import androidx.annotation.RequiresApi
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import java.nio.ByteBuffer
+import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 
+@RequiresApi(Build.VERSION_CODES.P)
 abstract class FTPCamera(context: Context, private val lifecycleOwner: LifecycleOwner) {
 
     protected abstract fun onCameraStateChanged(cameraInfo: CameraInfo)
