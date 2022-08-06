@@ -20,11 +20,6 @@ class FirstFragment : Fragment() {
     private var stopped = true
     private var _binding: FragmentFirstBinding? = null
     private val captureHandler = Handler(Looper.getMainLooper())
-    private val  log = object : de.pakab.timelapseftp.Log() {
-        override fun onLog() {
-            binding.tvLog.text = log()
-        }
-    }
     private var ftpCamera: FTPCamera? = null
 
     // This property is only valid between onCreateView and
@@ -45,7 +40,7 @@ class FirstFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        ftpCamera = object : FTPCamera(requireContext(), viewLifecycleOwner, log) {
+        ftpCamera = object : FTPCamera(requireContext(), viewLifecycleOwner) {
             override fun onCameraStateChanged(cameraInfo: CameraInfo) {
                 cameraInfo.cameraState.observe(viewLifecycleOwner) { cameraState ->
                     run {
@@ -79,8 +74,15 @@ class FirstFragment : Fragment() {
                     }
                 }
             }
+
+            override fun onCaptureSuccessful() {
+                lastCapture = Date()
+                updateLabel()
+            }
+
+            override fun onCaptureError() {
+            }
         }
-        log.setContext(requireContext())
         binding.buttonCapture.setOnClickListener {
             ftpCamera!!.capture()
         }
@@ -91,7 +93,6 @@ class FirstFragment : Fragment() {
             stop()
         }
     }
-
 
     private fun start() {
         stop()

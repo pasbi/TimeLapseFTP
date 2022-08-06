@@ -2,6 +2,7 @@ package de.pakab.timelapseftp
 
 import android.os.Handler
 import android.os.HandlerThread
+import android.util.Log
 import org.apache.commons.net.ftp.FTPClient
 import org.apache.commons.net.ftp.FTPConnectionClosedException
 import java.io.ByteArrayInputStream
@@ -10,24 +11,24 @@ import java.net.SocketException
 import java.text.SimpleDateFormat
 import java.util.*
 
-class FTPUpload(log: Log) {
+class FTPUpload() {
+    private val TAG = "FTPUpload"
     private val serverAddress = "ngcobalt364.manitu.net"
     private val userName = "ftp200019888"
     private val password = "yr9md2PwnfuHJ8kK"
     private val networkThread = HandlerThread("NetworkThread")
     private var ftpClient = FTPClient()
-    private val log = log
 
     private fun connect(): Boolean {
-        log.log("FTPClient is not available. Attempt to connect ...")
+        Log.i(TAG, "FTPClient is not available. Attempt to connect ...")
         ftpClient.connect(serverAddress)
         ftpClient.login(userName, password)
         ftpClient.setFileType(FTPClient.BINARY_FILE_TYPE)
         return if (ftpClient.isAvailable) {
-            log.log("Connection successful.")
+            Log.i(TAG, "Connection successful.")
             true
         } else {
-            log.log("Connection failed. Reply: ${ftpClient.reply}, Status: ${ftpClient.status}")
+            Log.e(TAG, "Connection failed. Reply: ${ftpClient.reply}, Status: ${ftpClient.status}")
             false
         }
     }
@@ -41,28 +42,28 @@ class FTPUpload(log: Log) {
             if (connect()) {
                 try {
                     val inputStream = ByteArrayInputStream(image)
-                    log.log("uploading $filename ...")
+                    Log.i(TAG,"uploading $filename ...")
                     if (ftpClient.storeFile(filename, inputStream)) {
-                        log.log("Successfully uploaded image '$filename'")
+                        Log.i(TAG, "Successfully uploaded image '$filename'")
                     } else {
-                        log.log("Failed to upload image '$filename'")
+                        Log.e(TAG, "Failed to upload image '$filename'")
                     }
 
-                    log.logStatus()
-                    if (ftpClient.storeFile("log.txt", log.log().byteInputStream(Charsets.UTF_8))) {
-                        log.log("Successfully uploaded log.")
-                    } else {
-                        log.log("Failed to upload image '$filename'")
-                    }
+//                    logStatus()
+//                    if (ftpClient.storeFile("log.txt", log.log().byteInputStream(Charsets.UTF_8))) {
+//                        log.log("Successfully uploaded log.")
+//                    } else {
+//                        log.log("Failed to upload image '$filename'")
+//                    }
                 } catch (e: FTPConnectionClosedException) {
-                    log.log("FTP Connection closed: ${e.message}")
+                    Log.e(TAG, "FTP Connection closed: ${e.message}")
                 } catch (e: SocketException) {
-                    log.log("Socket Exception: ${e.message}")
+                    Log.e(TAG, "Socket Exception: ${e.message}")
                 } catch (e: IOException) {
-                    log.log("IO Exception: ${e.message}")
+                    Log.e(TAG, "IO Exception: ${e.message}")
                 }
             } else {
-                log.log("Failed to connect to ftp server. Reply: ${ftpClient.reply}, Status: ${ftpClient.status}")
+                Log.e(TAG, "Failed to connect to ftp server. Reply: ${ftpClient.reply}, Status: ${ftpClient.status}")
             }
             ftpClient.logout()
             ftpClient.disconnect()

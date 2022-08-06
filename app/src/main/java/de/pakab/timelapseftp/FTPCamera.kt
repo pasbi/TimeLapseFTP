@@ -1,25 +1,26 @@
 package de.pakab.timelapseftp
 
 import android.content.Context
-   import android.view.Surface.ROTATION_0
-   import androidx.camera.core.*
-   import androidx.camera.lifecycle.ProcessCameraProvider
-   import androidx.core.content.ContextCompat
-   import androidx.lifecycle.LifecycleOwner
-   import java.nio.ByteBuffer
-   import java.util.concurrent.Executors
+import android.util.Log
+import android.view.Surface.ROTATION_0
+import androidx.camera.core.*
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.LifecycleOwner
+import java.nio.ByteBuffer
+import java.util.concurrent.Executors
 
-abstract class FTPCamera(context: Context, lifecycleOwner: LifecycleOwner, log: Log) {
+abstract class FTPCamera(context: Context, private val lifecycleOwner: LifecycleOwner) {
 
     protected abstract fun onCameraStateChanged(cameraInfo: CameraInfo)
+    protected abstract fun onCaptureSuccessful()
+    protected abstract fun onCaptureError()
+    private val TAG = "FTPCamera"
     private var imageCapture: ImageCapture? = null
     private var camera: Camera? = null
     private var cameraProvider: ProcessCameraProvider? = null
     private val cameraExecutor = Executors.newSingleThreadExecutor()
-    private val ftpClient = FTPUpload(log)
-    private val context = context
-    private val lifecycleOwner = lifecycleOwner
-    private val log = log
+    private val ftpClient = FTPUpload()
 
     private fun ByteBuffer.toByteArray(): ByteArray {
         rewind()    // Rewind the buffer to zero
@@ -29,21 +30,24 @@ abstract class FTPCamera(context: Context, lifecycleOwner: LifecycleOwner, log: 
     }
 
     fun capture() {
+        Log.i(TAG, "Start capture: $imageCapture")
         imageCapture?.let { imageCapture ->
             imageCapture.takePicture(cameraExecutor, object : ImageCapture.OnImageCapturedCallback() {
                 override fun onCaptureSuccess(image: ImageProxy) {
                     val planes = image.planes
                     if (planes.size != 1) {
-                        log.log("Expected one plane but got ${planes.size}")
+                        Log.wtf(TAG, "Expected one plane but got ${planes.size}")
                         return
                     }
-                    log.log("Captured image ${image.width}x${image.height}")
+                    Log.i(TAG, "Captured image ${image.width}x${image.height}")
                     ftpClient.upload(planes[0].buffer.toByteArray().clone())
                     image.close()
+                    onCaptureSuccessful()
                 }
 
                 override fun onError(exception: ImageCaptureException) {
-                    log.log("Photo capture failed: ${exception.message}")
+                    Log.e(TAG, "Photo capture failed: ${exception.message}")
+                    onCaptureError()
                 }
             })
         }
@@ -73,7 +77,7 @@ abstract class FTPCamera(context: Context, lifecycleOwner: LifecycleOwner, log: 
             camera = cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector, imageCapture)
             onCameraStateChanged(camera!!.cameraInfo)
         } catch (exc: Exception){
-            log.log("Use case binding failed")
+            Log.wtf(TAG, "Use case binding failed: ", exc)
         }
     }
 }
